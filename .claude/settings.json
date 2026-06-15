@@ -1,0 +1,16 @@
+{
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/Users/dylantieshue/Documents/GitHub/TD-Game/.claude/hooks/design-doc-staleness.sh",
+            "timeout": 15,
+            "statusMessage": "Checking DESIGN.md is up to date"
+          }
+        ]
+      }
+    ]
+  }
+}

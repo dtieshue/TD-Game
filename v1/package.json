@@ -1,0 +1,18 @@
+{
+  "name": "td-game",
+  "private": true,
+  "version": "0.0.1",
+  "description": "Multiplayer co-op tower defense — web-native (Three.js + Colyseus).",
+  "workspaces": [
+    "server",
+    "client"
+  ],
+  "scripts": {
+    "dev": "concurrently -n server,client -c blue,green \"npm:dev:server\" \"npm:dev:client\"",
+    "dev:server": "npm --workspace server run dev",
+    "dev:client": "npm --workspace client run dev"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.0"
+  }
+}

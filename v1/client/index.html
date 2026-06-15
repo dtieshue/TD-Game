@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>TD-Game — Milestone 1</title>
+    <style>
+      html, body { margin: 0; height: 100%; overflow: hidden; background: #87ceeb; font-family: system-ui, sans-serif; }
+      #app { position: fixed; inset: 0; }
+      #hud {
+        position: fixed; top: 12px; left: 12px; color: #fff;
+        text-shadow: 0 1px 2px rgba(0,0,0,.5); font-size: 15px; line-height: 1.6;
+        user-select: none; pointer-events: none;
+      }
+      #hud b { font-size: 17px; }
+      #startBtn, #modeBtn, #evolveBtn {
+        pointer-events: auto; display: block; margin-top: 8px; padding: 8px 14px; border: 0; border-radius: 8px;
+        font-weight: 700; cursor: pointer; box-shadow: 0 2px 6px rgba(0,0,0,.3);
+      }
+      #startBtn { background: #ffb703; color: #3a2d00; }
+      #modeBtn { background: #9b5de5; color: #fff; }
+      #evolveBtn { background: #2a9d3c; color: #fff; }
+      #startBtn:disabled, #modeBtn:disabled, #evolveBtn:disabled { opacity: .4; cursor: default; }
+      /* subtle tint so Build mode is obvious */
+      body.build-mode #app::after {
+        content: ""; position: fixed; inset: 0; pointer-events: none;
+        box-shadow: inset 0 0 0 4px #9b5de5; background: rgba(155,93,229,.06);
+      }
+      #banner {
+        position: fixed; inset: 0; display: none; align-items: center; justify-content: center;
+        background: rgba(0,0,0,.55); color: #fff; font-size: 42px; font-weight: 800;
+      }
+      #hint { position: fixed; bottom: 12px; left: 12px; color: #fff; opacity: .8; font-size: 13px; text-shadow: 0 1px 2px rgba(0,0,0,.5); user-select: none; }
+      #legend { position: fixed; bottom: 12px; right: 12px; color: #fff; font-size: 13px; text-shadow: 0 1px 2px rgba(0,0,0,.5); user-select: none; }
+
+      /* Ability bar */
+      #abilityBar { position: fixed; bottom: 40px; left: 50%; transform: translateX(-50%); display: flex; gap: 12px; user-select: none; }
+      .ability {
+        position: relative; width: 88px; padding: 8px 6px 6px; border-radius: 10px; text-align: center;
+        background: rgba(20,24,40,.6); color: #fff; box-shadow: 0 2px 8px rgba(0,0,0,.35); overflow: hidden;
+      }
+      .ability .key {
+        display: inline-block; min-width: 20px; padding: 1px 6px; border-radius: 5px;
+        background: #ffe066; color: #222; font-weight: 800; font-size: 13px;
+      }
+      .ability .abName { display: block; margin-top: 5px; font-size: 12px; opacity: .9; }
+      .ability .cd {
+        position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+        background: rgba(0,0,0,.55); font-size: 22px; font-weight: 800; color: #fff;
+      }
+      .ability.ready .cd { display: none; }
+
+      /* Lobby overlay */
+      #lobby {
+        position: fixed; inset: 0; z-index: 10; display: flex; align-items: center; justify-content: center;
+        background: linear-gradient(160deg, #6cc6ff, #87ceeb);
+      }
+      #lobbyPanel {
+        width: 360px; max-width: 90vw; background: #fff; border-radius: 16px; padding: 24px 26px;
+        box-shadow: 0 12px 40px rgba(0,0,0,.25); font-family: system-ui, sans-serif; color: #233;
+      }
+      #lobbyPanel h1 { margin: 0; font-size: 30px; color: #9b5de5; }
+      #lobbyPanel .sub { margin: 2px 0 18px; color: #678; font-size: 14px; }
+      #lobbyPanel label { display: block; font-size: 13px; color: #678; font-weight: 600; }
+      #nameInput {
+        width: 100%; box-sizing: border-box; margin-top: 5px; padding: 9px 12px; font-size: 15px;
+        border: 2px solid #d6dee6; border-radius: 8px; outline: none;
+      }
+      #nameInput:focus { border-color: #9b5de5; }
+      #playerList { margin: 16px 0; display: flex; flex-direction: column; gap: 6px; }
+      .playerRow {
+        display: flex; justify-content: space-between; align-items: center; padding: 8px 12px;
+        background: #f2f5f8; border-radius: 8px; font-size: 14px;
+      }
+      .playerRow .status { font-size: 12px; font-weight: 700; }
+      .playerRow .status.on { color: #2a9d3c; }
+      .playerRow .status.off { color: #b0b8c0; }
+      .lobbyBtns { display: flex; gap: 10px; }
+      .lobbyBtns button {
+        flex: 1; padding: 11px; border: 0; border-radius: 9px; font-weight: 700; font-size: 15px; cursor: pointer;
+      }
+      #readyBtn { background: #ffb703; color: #3a2d00; }
+      #readyBtn.on { background: #2a9d3c; color: #fff; }
+      #startGameBtn { background: #9b5de5; color: #fff; }
+      #startGameBtn:disabled { opacity: .4; cursor: default; }
+      #lobbyPanel .hintSmall { margin: 16px 0 0; font-size: 12px; color: #89a; line-height: 1.5; }
+      #lobbyPanel code { background: #eef2f6; padding: 1px 5px; border-radius: 4px; }
+    </style>
+  </head>
+  <body>
+    <div id="app"></div>
+    <div id="hud">
+      <div>Wave <b id="wave">0</b> &nbsp; Gold <b id="gold">0</b></div>
+      <div>Target HP <b id="hp">100</b></div>
+      <div id="nextWave"></div>
+      <button id="startBtn">Start wave early (+25g)</button>
+      <button id="modeBtn">Build view (B) — towers 30g</button>
+      <button id="evolveBtn">Evolve</button>
+    </div>
+    <div id="hint">WASD / arrows to move &middot; click to attack &middot; B to build</div>
+    <div id="legend">
+      <span style="color:#ff4136">&#9632;</span> grunt
+      &nbsp;<span style="color:#ffa630">&#9632;</span> runner&middot;fast
+      &nbsp;<span style="color:#6a040f">&#9632;</span> tank&middot;tough
+      &nbsp;&nbsp;<span style="color:#9b5de5">&#9650;</span> tower
+    </div>
+    <div id="abilityBar">
+      <div class="ability" id="ab0">
+        <span class="key">Q</span>
+        <span class="abName">Whirlwind</span>
+        <span class="cd"></span>
+      </div>
+      <div class="ability" id="ab1">
+        <span class="key">E</span>
+        <span class="abName">Dash</span>
+        <span class="cd"></span>
+      </div>
+    </div>
+    <div id="banner">GAME OVER</div>
+
+    <div id="lobby">
+      <div id="lobbyPanel">
+        <h1>TD-Game</h1>
+        <p class="sub">Co-op tower defense · up to 4 players</p>
+        <label>Your name
+          <input id="nameInput" maxlength="16" autocomplete="off" />
+        </label>
+        <div id="playerList"></div>
+        <div class="lobbyBtns">
+          <button id="readyBtn">Ready up</button>
+          <button id="startGameBtn" disabled>Start game</button>
+        </div>
+        <p class="hintSmall">Everyone must be ready before the game can start. Share <code id="joinUrl"></code> to invite.</p>
+      </div>
+    </div>
+
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
