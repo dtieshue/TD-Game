@@ -100,10 +100,7 @@ export class GameRoom extends Room<GameState> {
       if (p) p.ready = !!data?.ready;
     });
     this.onMessage("startGame", () => {
-      if (this.state.phase !== "lobby") return;
-      const players = [...this.state.players.values()];
-      if (players.length === 0 || !players.every((p) => p.ready)) return;
-      this.startGame();
+      this.tryAutoStart();
     });
 
     // Fixed simulation tick.
@@ -122,6 +119,13 @@ export class GameRoom extends Room<GameState> {
     this.state.players.set(client.sessionId, p);
     this.inputs.set(client.sessionId, { dx: 0, dz: 0 });
     this.lastDir.set(client.sessionId, { x: 0, z: 1 }); // default facing +z (matches client)
+  }
+
+  private tryAutoStart() {
+    if (this.state.phase !== "lobby") return;
+    const players = [...this.state.players.values()];
+    if (players.length === 0 || !players.every((p) => p.ready)) return;
+    this.startGame();
   }
 
   private startGame() {

@@ -358,6 +358,10 @@ async function connect() {
   });
 
   ($("joinUrl") as HTMLElement).textContent = location.host || "this page's URL";
+  const connEl = $("connStatus");
+  connEl.textContent = "Connected!";
+  connEl.className = "connStatus ok";
+  (readyBtn as HTMLButtonElement).disabled = false;
   (window as any).__room = room; // debug handle (room id / state inspection)
   (window as any).__camera = camera; // debug handle (inspection screenshots)
   updateLobby();
@@ -635,4 +639,7 @@ animate();
 connect().catch((err) => {
   console.error("Failed to connect:", err);
   ($("nextWave") as HTMLElement).textContent = "⚠ cannot reach server (is it running?)";
+  const connEl = $("connStatus");
+  connEl.textContent = "Cannot reach server — is it running?";
+  connEl.className = "connStatus err";
 });
