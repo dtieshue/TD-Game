@@ -40,4 +40,6 @@ export class GameState extends Schema {
   @type("number") nextWaveIn = 0;   // seconds until next wave (0 while a wave is active)
   @type("boolean") betweenWaves = true;
   @type("boolean") gameOver = false;
+  @type("number") kills = 0;        // total enemies defeated
+  @type("number") totalGold = 0;   // lifetime gold earned
 }

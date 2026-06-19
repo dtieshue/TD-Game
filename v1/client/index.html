@@ -28,8 +28,18 @@
       }
       #banner {
         position: fixed; inset: 0; display: none; align-items: center; justify-content: center;
-        background: rgba(0,0,0,.55); color: #fff; font-size: 42px; font-weight: 800;
+        background: rgba(0,0,0,.55); color: #fff; z-index: 5;
       }
+      #bannerPanel {
+        background: rgba(20,24,40,.85); border-radius: 16px; padding: 28px 36px; text-align: center;
+        box-shadow: 0 8px 32px rgba(0,0,0,.5); min-width: 280px;
+      }
+      #bannerPanel h1 { margin: 0 0 18px; font-size: 38px; font-weight: 800; color: #ff4136; }
+      #statsGrid {
+        display: grid; grid-template-columns: auto auto; gap: 6px 20px; text-align: left; font-size: 17px;
+      }
+      #statsGrid .label { color: #9ba8b8; font-weight: 600; }
+      #statsGrid .val { color: #fff; font-weight: 800; font-size: 19px; }
       #hint { position: fixed; bottom: 12px; left: 12px; color: #fff; opacity: .8; font-size: 13px; text-shadow: 0 1px 2px rgba(0,0,0,.5); user-select: none; }
       #legend { position: fixed; bottom: 12px; right: 12px; color: #fff; font-size: 13px; text-shadow: 0 1px 2px rgba(0,0,0,.5); user-select: none; }
 
@@ -93,8 +103,8 @@
   <body>
     <div id="app"></div>
     <div id="hud">
-      <div>Wave <b id="wave">0</b> &nbsp; Gold <b id="gold">0</b></div>
-      <div>Target HP <b id="hp">100</b></div>
+      <div>Wave <b id="wave">0</b> &nbsp; Gold <b id="gold">0</b> &nbsp; Kills <b id="kills">0</b></div>
+      <div>Target HP <b id="hp">100</b> &nbsp; Champion Lv<b id="evoLvl">1</b></div>
       <div id="nextWave"></div>
       <button id="startBtn">Start wave early (+25g)</button>
       <button id="modeBtn">Build view (B) — towers 30g</button>
@@ -119,7 +129,12 @@
         <span class="cd"></span>
       </div>
     </div>
-    <div id="banner">GAME OVER</div>
+    <div id="banner">
+      <div id="bannerPanel">
+        <h1>GAME OVER</h1>
+        <div id="statsGrid"></div>
+      </div>
+    </div>
 
     <div id="lobby">
       <div id="lobbyPanel">

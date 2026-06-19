@@ -384,12 +384,33 @@ async function connect() {
   cb(room.state).onChange(() => {
     $("wave").textContent = String(room.state.wave);
     $("gold").textContent = String(room.state.gold);
+    $("kills").textContent = String(room.state.kills);
     $("hp").textContent = String(room.state.targetHp);
+    const me = room.state.players.get(mySessionId);
+    $("evoLvl").textContent = String(me?.evo ?? 1);
     $("nextWave").textContent = room.state.betweenWaves
       ? `Next wave in ${room.state.nextWaveIn}s`
       : "Wave in progress";
     startBtn.disabled = !room.state.betweenWaves || room.state.gameOver;
-    ($("banner") as HTMLElement).style.display = room.state.gameOver ? "flex" : "none";
+    const banner = $("banner") as HTMLElement;
+    if (room.state.gameOver && banner.style.display !== "flex") {
+      const players = [...room.state.players.entries()] as [string, any][];
+      const stats: [string, string][] = [
+        ["Wave Reached", String(room.state.wave)],
+        ["Enemies Defeated", String(room.state.kills)],
+        ["Gold Earned", String(room.state.totalGold)],
+        ["Towers Built", String(room.state.towers.length)],
+      ];
+      players.forEach(([, p]) => {
+        stats.push([`${p.name} Level`, String(p.evo)]);
+      });
+      $("statsGrid").innerHTML = stats
+        .map(([label, val]) => `<span class="label">${label}</span><span class="val">${val}</span>`)
+        .join("");
+      banner.style.display = "flex";
+    } else if (!room.state.gameOver) {
+      banner.style.display = "none";
+    }
     updateLobby();
   });
 

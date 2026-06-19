@@ -80,6 +80,7 @@ export class GameRoom extends Room<GameState> {
     this.onMessage("startWave", () => {
       if (this.state.phase === "playing" && this.state.betweenWaves && !this.state.gameOver) {
         this.state.gold += EARLY_START_BONUS;
+        this.state.totalGold += EARLY_START_BONUS;
         this.startWave();
       }
     });
@@ -248,7 +249,10 @@ export class GameRoom extends Room<GameState> {
     e.hp -= dmg;
     if (e.hp <= 0) {
       this.state.enemies.splice(index, 1);
-      this.state.gold += ENEMY_KINDS[e.kind as EnemyKind].gold;
+      const reward = ENEMY_KINDS[e.kind as EnemyKind].gold;
+      this.state.gold += reward;
+      this.state.totalGold += reward;
+      this.state.kills += 1;
     }
   }
 
