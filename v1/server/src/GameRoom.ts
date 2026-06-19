@@ -103,9 +103,12 @@ export class GameRoom extends Room<GameState> {
     this.onMessage("startGame", () => {
       this.tryAutoStart();
     });
-
+    this.onMessage("pause", () => {
+      if (this.state.phase !== "playing") return;
+      this.state.paused = !this.state.paused;
+    });
     this.onMessage("restart", () => {
-      if (this.state.gameOver) this.resetMatch();
+      if (this.state.phase === "playing") this.resetMatch();
     });
 
     // Fixed simulation tick.
@@ -156,6 +159,7 @@ export class GameRoom extends Room<GameState> {
     this.state.wave = 0;
     this.state.kills = 0;
     this.state.gameOver = false;
+    this.state.paused = false;
     let i = 0;
     this.state.players.forEach((p, id) => {
       p.evo = 1;
@@ -336,7 +340,7 @@ export class GameRoom extends Room<GameState> {
   }
 
   private update(dt: number) {
-    if (this.state.phase !== "playing" || this.state.gameOver) return;
+    if (this.state.phase !== "playing" || this.state.gameOver || this.state.paused) return;
 
     // move players from their last input + tick ability cooldowns
     this.state.players.forEach((p, id) => {

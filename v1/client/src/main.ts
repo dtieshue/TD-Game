@@ -391,7 +391,8 @@ async function connect() {
     $("nextWave").textContent = room.state.betweenWaves
       ? `Next wave in ${room.state.nextWaveIn}s`
       : "Wave in progress";
-    startBtn.disabled = !room.state.betweenWaves || room.state.gameOver;
+    startBtn.disabled = !room.state.betweenWaves || room.state.gameOver || room.state.paused;
+    ($("pauseMenu") as HTMLElement).style.display = room.state.paused ? "flex" : "none";
     const banner = $("banner") as HTMLElement;
     if (room.state.gameOver && banner.style.display !== "flex") {
       const players = [...room.state.players.entries()] as [string, any][];
@@ -483,6 +484,9 @@ startBtn.addEventListener("click", () => room?.send("startWave"));
   setMode(mode === "build" ? "champion" : "build"));
 ($("evolveBtn") as HTMLButtonElement).addEventListener("click", () => room?.send("evolve"));
 
+$("resumeBtn").addEventListener("click", () => room?.send("pause"));
+$("restartBtn").addEventListener("click", () => room?.send("restart"));
+
 $("shareBtn").addEventListener("click", () => {
   if (!room?.state) return;
   const s = room.state;
@@ -518,6 +522,8 @@ const keys = new Set<string>();
 let lastDx = 0, lastDz = 0;
 addEventListener("keydown", (e) => {
   const k = e.key.toLowerCase();
+  if (k === "escape" && room?.state.phase === "playing") { room.send("pause"); return; }
+  if (room?.state.paused) return; // ignore gameplay input while paused
   if (k === "b") { setMode(mode === "build" ? "champion" : "build"); return; }
   const fresh = !keys.has(k); // ignore auto-repeat
   keys.add(k);
@@ -548,6 +554,7 @@ renderer.domElement.addEventListener("mousemove", (ev) => {
 });
 
 renderer.domElement.addEventListener("click", (ev) => {
+  if (room?.state.paused) return;
   if (mode === "build") {
     // clicking an existing tower upgrades it; otherwise place a new one
     pointer.x = (ev.clientX / innerWidth) * 2 - 1;

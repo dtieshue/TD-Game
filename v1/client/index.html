@@ -51,6 +51,24 @@
         background: #3a4257; color: #fff; font-weight: 700; font-size: 15px; cursor: pointer;
       }
       #shareBtn:hover { background: #4a5670; }
+      /* Pause menu */
+      #pauseMenu {
+        position: fixed; inset: 0; display: none; align-items: center; justify-content: center;
+        background: rgba(0,0,0,.5); z-index: 8;
+      }
+      #pausePanel {
+        background: rgba(20,24,40,.9); border-radius: 16px; padding: 28px 36px; text-align: center;
+        box-shadow: 0 8px 32px rgba(0,0,0,.5); min-width: 240px;
+      }
+      #pausePanel h1 { margin: 0 0 20px; font-size: 32px; font-weight: 800; color: #fff; }
+      .pauseBtns { display: flex; flex-direction: column; gap: 10px; }
+      .pauseBtns button {
+        padding: 12px 24px; border: 0; border-radius: 9px; font-weight: 700; font-size: 15px; cursor: pointer;
+      }
+      #resumeBtn { background: #2a9d3c; color: #fff; }
+      #resumeBtn:hover { background: #1f7a2e; }
+      #restartBtn { background: #ffb703; color: #3a2d00; }
+      #restartBtn:hover { background: #e0a200; }
       #hint { position: fixed; bottom: 12px; left: 12px; color: #fff; opacity: .8; font-size: 13px; text-shadow: 0 1px 2px rgba(0,0,0,.5); user-select: none; }
       #legend { position: fixed; bottom: 12px; right: 12px; color: #fff; font-size: 13px; text-shadow: 0 1px 2px rgba(0,0,0,.5); user-select: none; }
 
@@ -138,6 +156,15 @@
         <span class="key">E</span>
         <span class="abName">Dash</span>
         <span class="cd"></span>
+      </div>
+    </div>
+    <div id="pauseMenu">
+      <div id="pausePanel">
+        <h1>PAUSED</h1>
+        <div class="pauseBtns">
+          <button id="resumeBtn">Resume</button>
+          <button id="restartBtn">Restart</button>
+        </div>
       </div>
     </div>
     <div id="banner">
