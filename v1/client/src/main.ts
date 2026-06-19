@@ -624,8 +624,9 @@ function sendInput() {
   if (mode === "tps") {
     // movement relative to where you're aiming; you always face the aim
     const aFx = Math.sin(aimYaw), aFz = Math.cos(aimYaw);
-    dx = aFx * fwd + Math.cos(aimYaw) * strafe;   // forward + right vectors
-    dz = aFz * fwd + -Math.sin(aimYaw) * strafe;
+    // right vector = screen-right when looking along the aim = (-cos, sin)
+    dx = aFx * fwd - Math.cos(aimYaw) * strafe;
+    dz = aFz * fwd + Math.sin(aimYaw) * strafe;
     fx = aFx; fz = aFz;
   } else {
     // top-down: world-space WASD; face the movement direction (keep last when idle)
