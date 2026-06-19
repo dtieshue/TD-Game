@@ -484,6 +484,7 @@ startBtn.addEventListener("click", () => room?.send("startWave"));
   setMode(mode === "build" ? "champion" : "build"));
 ($("evolveBtn") as HTMLButtonElement).addEventListener("click", () => room?.send("evolve"));
 
+$("pauseBtn").addEventListener("click", () => room?.send("pause"));
 $("resumeBtn").addEventListener("click", () => room?.send("pause"));
 $("restartBtn").addEventListener("click", () => room?.send("restart"));
 
@@ -522,7 +523,7 @@ const keys = new Set<string>();
 let lastDx = 0, lastDz = 0;
 addEventListener("keydown", (e) => {
   const k = e.key.toLowerCase();
-  if (k === "escape" && room?.state.phase === "playing") { room.send("pause"); return; }
+  if ((k === "escape" || k === "p") && room?.state.phase === "playing") { room.send("pause"); return; }
   if (room?.state.paused) return; // ignore gameplay input while paused
   if (k === "b") { setMode(mode === "build" ? "champion" : "build"); return; }
   const fresh = !keys.has(k); // ignore auto-repeat
