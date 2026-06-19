@@ -17,6 +17,7 @@ export class Enemy extends Schema {
   @type("number") x = 0;
   @type("number") z = 0;
   @type("number") hp = 10;
+  @type("number") maxHp = 10;
 }
 
 // A player-built defensive tower (auto-fires at nearby creeps).

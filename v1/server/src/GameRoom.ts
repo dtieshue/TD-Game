@@ -209,6 +209,7 @@ export class GameRoom extends Room<GameState> {
     else if (edge === 2) { e.x = t; e.z = -ARENA; }
     else { e.x = t; e.z = ARENA; }
     e.hp = k.baseHp + this.state.wave * k.hpPerWave;
+    e.maxHp = e.hp;
     this.state.enemies.push(e);
   }
 

@@ -77,7 +77,7 @@ function setMode(next: ViewMode) {
 
 // ---------------- Entity view registries ----------------
 const playerMeshes = new Map<string, THREE.Group>();
-const enemyMeshes = new Map<string, THREE.Mesh>();
+const enemyMeshes = new Map<string, THREE.Group>();
 const towerMeshes = new Map<string, THREE.Mesh>();
 
 // per-knight animation state. rx/rz = smoothly interpolated render position;
@@ -159,15 +159,51 @@ const ENEMY_VIS: Record<string, { color: number; scale: number }> = {
   runner: { color: 0xffa630, scale: 0.7 },
   tank:   { color: 0x6a040f, scale: 1.6 },
 };
+function makeHealthBar() {
+  const canvas = document.createElement("canvas");
+  canvas.width = 64;
+  canvas.height = 8;
+  const ctx = canvas.getContext("2d")!;
+  ctx.fillStyle = "#2a9d3c";
+  ctx.fillRect(0, 0, 64, 8);
+  const tex = new THREE.CanvasTexture(canvas);
+  tex.minFilter = THREE.NearestFilter;
+  const sprite = new THREE.Sprite(
+    new THREE.SpriteMaterial({ map: tex, depthTest: false })
+  );
+  sprite.scale.set(1.2, 0.15, 1);
+  sprite.userData.canvas = canvas;
+  sprite.userData.ctx = ctx;
+  sprite.userData.tex = tex;
+  return sprite;
+}
+
+function updateHealthBar(sprite: THREE.Sprite, ratio: number) {
+  const ctx = sprite.userData.ctx as CanvasRenderingContext2D;
+  const canvas = sprite.userData.canvas as HTMLCanvasElement;
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.fillStyle = "#333";
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.fillStyle = ratio > 0.5 ? "#2a9d3c" : ratio > 0.25 ? "#ffb703" : "#d00000";
+  ctx.fillRect(0, 0, canvas.width * ratio, canvas.height);
+  (sprite.userData.tex as THREE.CanvasTexture).needsUpdate = true;
+}
+
 function makeEnemy(kind: string) {
   const v = ENEMY_VIS[kind] ?? ENEMY_VIS.grunt;
-  const m = new THREE.Mesh(
+  const g = new THREE.Group();
+  const body = new THREE.Mesh(
     new THREE.BoxGeometry(v.scale, v.scale, v.scale),
     new THREE.MeshStandardMaterial({ color: v.color })
   );
-  m.position.y = v.scale / 2;
-  scene.add(m);
-  return m;
+  body.position.y = v.scale / 2;
+  g.add(body);
+  const bar = makeHealthBar();
+  bar.position.y = v.scale + 0.3;
+  g.add(bar);
+  g.userData.bar = bar;
+  scene.add(g);
+  return g;
 }
 function makeTower() {
   const m = new THREE.Mesh(
@@ -598,8 +634,13 @@ function updateKnights(dt: number) {
 function syncEnemiesTowers() {
   if (!room?.state) return;
   room.state.enemies.forEach((e: any) => {
-    const m = enemyMeshes.get(e.id);
-    if (m) { m.position.x = e.x; m.position.z = e.z; }
+    const g = enemyMeshes.get(e.id);
+    if (g) {
+      g.position.x = e.x;
+      g.position.z = e.z;
+      const bar = g.userData.bar as THREE.Sprite;
+      if (bar && e.maxHp > 0) updateHealthBar(bar, e.hp / e.maxHp);
+    }
   });
   room.state.towers.forEach((t: any) => {
     const m = towerMeshes.get(t.id);
