@@ -4,7 +4,9 @@
 # by this same hook (stop_hook_active) to avoid loops.
 
 input="$(cat)"
-proj="/Users/dylantieshue/Documents/GitHub/TD-Game"
+# Project root: Claude Code sets CLAUDE_PROJECT_DIR for hooks; fall back to this
+# script's location (.claude/hooks/) so it also works standalone or on any clone.
+proj="${CLAUDE_PROJECT_DIR:-$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)}"
 doc="$proj/DESIGN.md"
 
 # Avoid re-blocking loops.
