@@ -482,6 +482,23 @@ startBtn.addEventListener("click", () => room?.send("startWave"));
   setMode(mode === "build" ? "champion" : "build"));
 ($("evolveBtn") as HTMLButtonElement).addEventListener("click", () => room?.send("evolve"));
 
+$("shareBtn").addEventListener("click", () => {
+  if (!room?.state) return;
+  const s = room.state;
+  const players = [...s.players.values()] as any[];
+  const names = players.map((p) => `${p.name} (Lv${p.evo})`).join(", ");
+  const text = [
+    `I just survived to Wave ${s.wave} in TD-Game!`,
+    `${s.kills} enemies defeated | ${s.totalGold} gold earned | ${s.towers.length} towers built`,
+    `Players: ${names}`,
+  ].join("\n");
+  navigator.clipboard.writeText(text).then(() => {
+    const btn = $("shareBtn") as HTMLButtonElement;
+    btn.textContent = "Copied!";
+    setTimeout(() => { btn.textContent = "Share Result"; }, 2000);
+  });
+});
+
 function updateEvolveBtn() {
   const btn = $("evolveBtn") as HTMLButtonElement;
   const evo = evoOf();

@@ -40,6 +40,11 @@
       }
       #statsGrid .label { color: #9ba8b8; font-weight: 600; }
       #statsGrid .val { color: #fff; font-weight: 800; font-size: 19px; }
+      #shareBtn {
+        margin-top: 18px; padding: 10px 24px; border: 0; border-radius: 9px;
+        background: #9b5de5; color: #fff; font-weight: 700; font-size: 15px; cursor: pointer;
+      }
+      #shareBtn:hover { background: #7b3fc5; }
       #hint { position: fixed; bottom: 12px; left: 12px; color: #fff; opacity: .8; font-size: 13px; text-shadow: 0 1px 2px rgba(0,0,0,.5); user-select: none; }
       #legend { position: fixed; bottom: 12px; right: 12px; color: #fff; font-size: 13px; text-shadow: 0 1px 2px rgba(0,0,0,.5); user-select: none; }
 
@@ -133,6 +138,7 @@
       <div id="bannerPanel">
         <h1>GAME OVER</h1>
         <div id="statsGrid"></div>
+        <button id="shareBtn">Share Result</button>
       </div>
     </div>
 
