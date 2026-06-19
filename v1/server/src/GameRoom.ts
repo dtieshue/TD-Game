@@ -45,7 +45,7 @@ const ABILITIES = [
   { key: "dash",      cooldown: 3 }, // slot 1 — burst reposition
 ];
 
-type Input = { dx: number; dz: number };
+type Input = { dx: number; dz: number; fx?: number; fz?: number };
 
 export class GameRoom extends Room<GameState> {
   maxClients = 4;
@@ -57,17 +57,22 @@ export class GameRoom extends Room<GameState> {
   private enemySeq = 0;
   private towerSeq = 0;
   private towerCooldowns = new Map<string, number>(); // tower id -> seconds until next shot
-  private lastDir = new Map<string, { x: number; z: number }>(); // last movement dir, for dash
 
   onCreate() {
     this.setState(new GameState());
 
     this.onMessage("input", (client, data: Input) => {
-      // normalize so diagonal isn't faster
-      let { dx, dz } = data ?? { dx: 0, dz: 0 };
+      // normalize movement so diagonal isn't faster
+      let dx = data?.dx ?? 0, dz = data?.dz ?? 0;
       const len = Math.hypot(dx, dz);
       if (len > 1) { dx /= len; dz /= len; }
       this.inputs.set(client.sessionId, { dx, dz });
+      // facing/aim is client-driven (movement dir in top-down, mouse-look in TPS)
+      const p = this.state.players.get(client.sessionId);
+      if (p && data?.fx !== undefined && data?.fz !== undefined) {
+        const fl = Math.hypot(data.fx, data.fz);
+        if (fl > 1e-4) { p.fx = data.fx / fl; p.fz = data.fz / fl; }
+      }
     });
 
     this.onMessage("attack", (client) => this.handleAttack(client.sessionId));
@@ -126,7 +131,6 @@ export class GameRoom extends Room<GameState> {
     p.cds.set("attack", 0);
     this.state.players.set(client.sessionId, p);
     this.inputs.set(client.sessionId, { dx: 0, dz: 0 });
-    this.lastDir.set(client.sessionId, { x: 0, z: 1 }); // default facing +z (matches client)
   }
 
   private tryAutoStart() {
@@ -161,13 +165,13 @@ export class GameRoom extends Room<GameState> {
     this.state.gameOver = false;
     this.state.paused = false;
     let i = 0;
-    this.state.players.forEach((p, id) => {
+    this.state.players.forEach((p) => {
       p.evo = 1;
       for (const ab of ABILITIES) p.cds.set(ab.key, 0);
       p.cds.set("attack", 0);
       p.x = Math.cos(i) * 4;
       p.z = Math.sin(i) * 4 + 6;
-      this.lastDir.set(id, { x: 0, z: 1 });
+      p.fx = 0; p.fz = 1;
       i++;
     });
     this.startGame();
@@ -176,7 +180,6 @@ export class GameRoom extends Room<GameState> {
   onLeave(client: Client) {
     this.state.players.delete(client.sessionId);
     this.inputs.delete(client.sessionId);
-    this.lastDir.delete(client.sessionId);
   }
 
   private handleEvolve(sessionId: string) {
@@ -204,9 +207,8 @@ export class GameRoom extends Room<GameState> {
         if ((e.x - p.x) ** 2 + (e.z - p.z) ** 2 <= r2) this.damageEnemy(i, stage.whirlDmg);
       }
     } else if (ab.key === "dash") {
-      const d = this.lastDir.get(sessionId) ?? { x: 0, z: 1 };
-      p.x = clamp(p.x + d.x * stage.dash, -ARENA, ARENA);
-      p.z = clamp(p.z + d.z * stage.dash, -ARENA, ARENA);
+      p.x = clamp(p.x + p.fx * stage.dash, -ARENA, ARENA);
+      p.z = clamp(p.z + p.fz * stage.dash, -ARENA, ARENA);
     }
     p.cds.set(ab.key, ab.cooldown);
   }
@@ -256,10 +258,8 @@ export class GameRoom extends Room<GameState> {
     if (!p) return;
     if ((p.cds.get("attack") ?? 0) > 0) return; // swing cooldown
 
-    // facing = last movement direction
-    const dir = this.lastDir.get(sessionId) ?? { x: 0, z: 1 };
-    const dl = Math.hypot(dir.x, dir.z) || 1;
-    const fx = dir.x / dl, fz = dir.z / dl;
+    // facing/aim direction (client-driven, synced on the player)
+    const fx = p.fx, fz = p.fz;
     const reach = ATTACK_RANGE * (1 + (p.evo - 1) * 0.25); // matches telegraph (evo-scaled)
     const dmg = EVO[p.evo - 1].atk;
 
@@ -349,7 +349,6 @@ export class GameRoom extends Room<GameState> {
         const speed = EVO[p.evo - 1].speed;
         p.x = clamp(p.x + inp.dx * speed * dt, -ARENA, ARENA);
         p.z = clamp(p.z + inp.dz * speed * dt, -ARENA, ARENA);
-        if (inp.dx !== 0 || inp.dz !== 0) this.lastDir.set(id, { x: inp.dx, z: inp.dz });
       }
       p.cds.forEach((v, k) => {
         if (v > 0) p.cds.set(k, Math.max(0, v - dt));

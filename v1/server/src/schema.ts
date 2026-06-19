@@ -7,6 +7,8 @@ export class Player extends Schema {
   @type("string") name = "Knight";
   @type("boolean") ready = false;
   @type("number") evo = 1; // champion evolution stage (1..3)
+  @type("number") fx = 0;  // facing/aim unit vector (client-driven; for attack arc + model)
+  @type("number") fz = 1;
   @type({ map: "number" }) cds = new MapSchema<number>(); // ability key -> cooldown remaining (s)
 }
 

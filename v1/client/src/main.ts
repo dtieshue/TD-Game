@@ -49,31 +49,65 @@ window.addEventListener("resize", () => {
 
 // ---------------- View modes ----------------
 const TOWER_COST = 30; // mirrors server tuning (for HUD affordability)
-type ViewMode = "champion" | "build";
+type ViewMode = "champion" | "tps" | "build";
 let mode: ViewMode = "champion";
+let prevNonBuild: ViewMode = "champion"; // mode to return to when leaving Build
+let aimYaw = 0;          // TPS mouse-look facing (0 = +z); forward = (sin,cos)
+let pointerLocked = false;
+const MOUSE_SENS = 0.0024;
 
 function applyCamera() {
   if (mode === "build") {
     camera.position.set(0, 60, 0.01); // straight-down plan view
-  } else {
+    camera.lookAt(0, 0, 0);
+  } else if (mode === "champion") {
     camera.position.set(0, 34, 26);   // angled 2.5D follow
+    camera.lookAt(0, 0, 0);
   }
-  camera.lookAt(0, 0, 0);
+  // "tps" camera is positioned every frame in updateTpsCamera()
 }
 applyCamera();
 
+// Third-person camera: sits behind the champion along its aim direction.
+function updateTpsCamera() {
+  const me = playerMeshes.get(mySessionId);
+  if (!me) return;
+  const fx = Math.sin(aimYaw), fz = Math.cos(aimYaw);
+  const px = me.position.x, pz = me.position.z;
+  camera.position.set(px - fx * 8, 5.2, pz - fz * 8);
+  camera.lookAt(px + fx * 3, 1.4, pz + fz * 3);
+}
+
 function setMode(next: ViewMode) {
+  const wasTps = mode === "tps";
   mode = next;
+  if (next !== "build") prevNonBuild = next;
   applyCamera();
   buildGhost.visible = false;
   document.body.classList.toggle("build-mode", mode === "build");
-  ($("modeBtn") as HTMLButtonElement).textContent =
-    mode === "build" ? "Champion view (B)" : `Build view (B) — towers ${TOWER_COST}g`;
-  ($("hint") as HTMLElement).textContent =
-    mode === "build"
-      ? "Build view · click ground = place tower (30g) · click a tower = upgrade · B to return"
-      : "WASD / arrows to move · click to attack · B to build";
+  // pointer lock for TPS mouse-look
+  if (mode === "tps") renderer.domElement.requestPointerLock?.();
+  else if (wasTps && document.pointerLockElement) document.exitPointerLock();
+  updateModeUi();
 }
+
+function updateModeUi() {
+  ($("modeBtn") as HTMLButtonElement).textContent =
+    mode === "build" ? "Exit Build (B)" : `Build view (B) — towers ${TOWER_COST}g`;
+  const hints: Record<ViewMode, string> = {
+    champion: "WASD move · click attack · Q/E abilities · V: 3rd-person · B: build",
+    tps: "WASD relative to aim · mouse to look · click attack · Esc frees cursor · V: top-down",
+    build: "Build view · click ground = place tower (30g) · click a tower = upgrade · B to return",
+  };
+  ($("hint") as HTMLElement).textContent = hints[mode];
+}
+
+document.addEventListener("pointerlockchange", () => {
+  pointerLocked = document.pointerLockElement === renderer.domElement;
+});
+window.addEventListener("mousemove", (e) => {
+  if (mode === "tps" && pointerLocked) aimYaw -= e.movementX * MOUSE_SENS;
+});
 
 // ---------------- Entity view registries ----------------
 const playerMeshes = new Map<string, THREE.Group>();
@@ -481,7 +515,7 @@ function escapeHtml(s: string) {
 
 startBtn.addEventListener("click", () => room?.send("startWave"));
 ($("modeBtn") as HTMLButtonElement).addEventListener("click", () =>
-  setMode(mode === "build" ? "champion" : "build"));
+  setMode(mode === "build" ? prevNonBuild : "build"));
 ($("evolveBtn") as HTMLButtonElement).addEventListener("click", () => room?.send("evolve"));
 
 $("pauseBtn").addEventListener("click", () => room?.send("pause"));
@@ -520,12 +554,12 @@ function updateEvolveBtn() {
 
 // ---------------- Input ----------------
 const keys = new Set<string>();
-let lastDx = 0, lastDz = 0;
 addEventListener("keydown", (e) => {
   const k = e.key.toLowerCase();
   if ((k === "escape" || k === "p") && room?.state.phase === "playing") { room.send("pause"); return; }
   if (room?.state.paused) return; // ignore gameplay input while paused
-  if (k === "b") { setMode(mode === "build" ? "champion" : "build"); return; }
+  if (k === "b") { setMode(mode === "build" ? prevNonBuild : "build"); return; }
+  if (k === "v") { if (mode !== "build") setMode(mode === "tps" ? "champion" : "tps"); return; }
   const fresh = !keys.has(k); // ignore auto-repeat
   keys.add(k);
   if (fresh && mode !== "build") {
@@ -569,20 +603,45 @@ renderer.domElement.addEventListener("click", (ev) => {
     const p = groundPoint(ev);
     if (p) room?.send("buildTower", { x: p.x, z: p.z });
   } else {
+    // in TPS, the first click captures the cursor for mouse-look; then clicks attack
+    if (mode === "tps" && !pointerLocked) { renderer.domElement.requestPointerLock?.(); return; }
     room?.send("attack");
     triggerSwing(mySessionId); // instant local feedback
   }
 });
 
+let lastSent = { dx: 0, dz: 0, fx: 0, fz: 1 };
 function sendInput() {
-  let dx = 0, dz = 0;
-  if (keys.has("w") || keys.has("arrowup")) dz -= 1;
-  if (keys.has("s") || keys.has("arrowdown")) dz += 1;
-  if (keys.has("a") || keys.has("arrowleft")) dx -= 1;
-  if (keys.has("d") || keys.has("arrowright")) dx += 1;
-  if (dx !== lastDx || dz !== lastDz) {
-    room?.send("input", { dx, dz });
-    lastDx = dx; lastDz = dz;
+  if (!room) return;
+  const W = keys.has("w") || keys.has("arrowup");
+  const S = keys.has("s") || keys.has("arrowdown");
+  const A = keys.has("a") || keys.has("arrowleft");
+  const D = keys.has("d") || keys.has("arrowright");
+  const fwd = (W ? 1 : 0) - (S ? 1 : 0);
+  const strafe = (D ? 1 : 0) - (A ? 1 : 0);
+
+  let dx: number, dz: number, fx: number, fz: number;
+  if (mode === "tps") {
+    // movement relative to where you're aiming; you always face the aim
+    const aFx = Math.sin(aimYaw), aFz = Math.cos(aimYaw);
+    dx = aFx * fwd + Math.cos(aimYaw) * strafe;   // forward + right vectors
+    dz = aFz * fwd + -Math.sin(aimYaw) * strafe;
+    fx = aFx; fz = aFz;
+  } else {
+    // top-down: world-space WASD; face the movement direction (keep last when idle)
+    dx = strafe; dz = -fwd;
+    const ml = Math.hypot(dx, dz);
+    if (ml > 1e-4) { fx = dx / ml; fz = dz / ml; }
+    else { fx = lastSent.fx; fz = lastSent.fz; }
+  }
+  const ml = Math.hypot(dx, dz);
+  if (ml > 1) { dx /= ml; dz /= ml; } // normalize diagonals
+
+  const changed = dx !== lastSent.dx || dz !== lastSent.dz ||
+    Math.abs(fx - lastSent.fx) > 0.008 || Math.abs(fz - lastSent.fz) > 0.008;
+  if (changed) {
+    room.send("input", { dx, dz, fx, fz });
+    lastSent = { dx, dz, fx, fz };
   }
 }
 
@@ -632,9 +691,18 @@ function updateKnights(dt: number) {
     st.vz = lerp(st.vz, instVz, va);
     const speed = Math.hypot(st.vx, st.vz);
 
-    // face the velocity direction (shortest path), only when actually moving
-    if (speed > 0.7) {
-      let d = Math.atan2(st.vx, st.vz) - st.yaw;
+    // facing: TPS local = mouse-look (snappy); top-down local = movement dir;
+    // remote players = their synced aim (p.fx/p.fz)
+    if (sid === mySessionId && mode === "tps") {
+      st.yaw = aimYaw;
+    } else {
+      let targetYaw = st.yaw;
+      if (sid === mySessionId) {
+        if (speed > 0.7) targetYaw = Math.atan2(st.vx, st.vz);
+      } else if (Math.hypot(p.fx ?? 0, p.fz ?? 0) > 0.01) {
+        targetYaw = Math.atan2(p.fx, p.fz);
+      }
+      let d = targetYaw - st.yaw;
       while (d > Math.PI) d -= 2 * Math.PI;
       while (d < -Math.PI) d += 2 * Math.PI;
       st.yaw += d * Math.min(1, dt * 16);
@@ -716,6 +784,7 @@ function animate() {
   if (room) {
     updateLobby(); sendInput();
     updateKnights(dt); syncEnemiesTowers();
+    if (mode === "tps") updateTpsCamera();
     updateAbilityHud(); updateEvolveBtn();
   }
   updateRings(dt);
