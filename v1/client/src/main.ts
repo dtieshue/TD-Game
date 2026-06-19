@@ -449,6 +449,7 @@ addEventListener("keydown", (e) => {
   if (fresh && mode !== "build") {
     if (k === "q") castAbility(0);
     if (k === "e") castAbility(1);
+    if (k === " ") { room?.send("attack"); triggerSwing(mySessionId); }
   }
 });
 addEventListener("keyup", (e) => keys.delete(e.key.toLowerCase()));
