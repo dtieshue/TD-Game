@@ -104,6 +104,10 @@ export class GameRoom extends Room<GameState> {
       this.tryAutoStart();
     });
 
+    this.onMessage("restart", () => {
+      if (this.state.gameOver) this.resetMatch();
+    });
+
     // Fixed simulation tick.
     this.setSimulationInterval((deltaMs) => this.update(deltaMs / 1000));
   }
@@ -135,6 +139,34 @@ export class GameRoom extends Room<GameState> {
     this.state.betweenWaves = true;
     this.countdown = WAVE_GAP;
     this.state.nextWaveIn = Math.ceil(WAVE_GAP);
+  }
+
+  // Reset all match state after a game over and immediately start a fresh game.
+  private resetMatch() {
+    this.state.enemies.splice(0);
+    this.state.towers.splice(0);
+    this.towerCooldowns.clear();
+    this.enemySeq = 0;
+    this.towerSeq = 0;
+    this.spawnQueue = 0;
+    this.spawnTimer = 0;
+    this.state.targetHp = 100;
+    this.state.gold = 0;
+    this.state.totalGold = 0;
+    this.state.wave = 0;
+    this.state.kills = 0;
+    this.state.gameOver = false;
+    let i = 0;
+    this.state.players.forEach((p, id) => {
+      p.evo = 1;
+      for (const ab of ABILITIES) p.cds.set(ab.key, 0);
+      p.cds.set("attack", 0);
+      p.x = Math.cos(i) * 4;
+      p.z = Math.sin(i) * 4 + 6;
+      this.lastDir.set(id, { x: 0, z: 1 });
+      i++;
+    });
+    this.startGame();
   }
 
   onLeave(client: Client) {

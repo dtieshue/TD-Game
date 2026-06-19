@@ -414,6 +414,7 @@ async function connect() {
     updateLobby();
   });
 
+  ($("playAgainBtn") as HTMLButtonElement).addEventListener("click", () => room?.send("restart"));
   ($("joinUrl") as HTMLElement).textContent = location.host || "this page's URL";
   const connEl = $("connStatus");
   connEl.textContent = "Connected!";
